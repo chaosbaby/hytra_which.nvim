@@ -3,3 +3,4 @@
 | ID | Title | Status | Link |
 |---|---|---|---|
 | 001 | Project Scaffolding | Done | [./tracks/001-scaffold/index.md](./tracks/001-scaffold/index.md) |
+| 002 | Dynamic Textobject Filtering | Done | [./tracks/002-filter/index.md](./tracks/002-filter/index.md) |

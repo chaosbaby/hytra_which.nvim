@@ -32,6 +32,23 @@ local Hytra = {
   }
 }
 
+-- 辅助：获取支持的 capture
+function Hytra.get_supported_captures(bufnr)
+  local ok_parser, parsers = pcall(require, "nvim-treesitter.parsers")
+  if not ok_parser then return nil end
+  local lang = parsers.get_buf_lang(bufnr)
+  if not lang then return nil end
+  local ok_query, query = pcall(require, "nvim-treesitter.query")
+  if not ok_query then return nil end
+  local ts_query = query.get_query(lang, "textobjects")
+  if not ts_query then return nil end
+  local captures = {}
+  for _, name in ipairs(ts_query.captures) do
+    captures[name] = true
+  end
+  return captures
+end
+
 -- Treesitter 跳转核心逻辑
 function Hytra.ts_jump(obj, forward, start)
   if obj then Hytra.last_textobj = obj end
@@ -47,8 +64,8 @@ function Hytra.ts_jump(obj, forward, start)
   end
 end
 
--- 万能 Hydra 激活器：给任何 prefix 增加一个 trigger 键来开启 which-key 的 loop 模式
-function Hytra.activate(prefix, trigger, desc)
+-- 万能 Hydra 激活器
+function Hytra.activate(prefix, trigger, desc, bufnr)
   local wk_ok, wk = pcall(require, "which-key")
   if not wk_ok then return end
   trigger = trigger or "x"
@@ -57,38 +74,47 @@ function Hytra.activate(prefix, trigger, desc)
       prefix .. trigger,
       function() wk.show({ keys = prefix, loop = true }) end,
       desc = desc or ("Hydra Mode (" .. prefix .. ")"),
+      buffer = bufnr,
     },
   })
 end
 
--- 为 Treesitter Textobjects 生成一组专用的跳转映射
-function Hytra.setup_ts(opts)
-  local prefix = opts.prefix or "<leader>m"
-  local trigger = opts.trigger or "x"
+-- 动态为 Buffer 注册 TS 映射
+function Hytra.register_buffer_ts(bufnr, prefix, trigger)
   local wk_ok, wk = pcall(require, "which-key")
   if not wk_ok then return end
 
+  local supported = Hytra.get_supported_captures(bufnr)
+  if not supported then return end
+
   local items = {
-    { prefix, group = "TS-Hytra", mode = "n" },
-    { prefix .. "j", function() Hytra.ts_jump(nil, true, true) end, desc = "Next Start" },
-    { prefix .. "k", function() Hytra.ts_jump(nil, false, true) end, desc = "Prev Start" },
-    { prefix .. "J", function() Hytra.ts_jump(nil, true, false) end, desc = "Next End" },
-    { prefix .. "K", function() Hytra.ts_jump(nil, false, false) end, desc = "Prev End" },
+    { prefix, group = "TS-Hytra", mode = "n", buffer = bufnr },
+    { prefix .. "j", function() Hytra.ts_jump(nil, true, true) end, desc = "Next Start", buffer = bufnr },
+    { prefix .. "k", function() Hytra.ts_jump(nil, false, true) end, desc = "Prev Start", buffer = bufnr },
+    { prefix .. "J", function() Hytra.ts_jump(nil, true, false) end, desc = "Next End", buffer = bufnr },
+    { prefix .. "K", function() Hytra.ts_jump(nil, false, false) end, desc = "Prev End", buffer = bufnr },
   }
 
+  local has_any = false
   for k, v in pairs(Hytra.defines) do
-    table.insert(items, {
-      prefix .. k,
-      function()
-        Hytra.ts_jump(v, true, true)
-        -- 跳转后自动触发循环显示
-        wk.show({ keys = prefix, loop = true })
-      end,
-      desc = v,
-    })
+    if supported[v] then
+      has_any = true
+      table.insert(items, {
+        prefix .. k,
+        function()
+          Hytra.ts_jump(v, true, true)
+          wk.show({ keys = prefix, loop = true })
+        end,
+        desc = v,
+        buffer = bufnr,
+      })
+    end
   end
-  wk.add(items)
-  Hytra.activate(prefix, trigger, "TS TextObject Hydra")
+
+  if has_any then
+    wk.add(items)
+    Hytra.activate(prefix, trigger, "TS TextObject Hydra", bufnr)
+  end
 end
 
 return {
@@ -100,55 +126,42 @@ return {
   opts = {
     ensure_installed = { "lua", "python", "markdown" },
     textobjects = {
-      select = {
-        enable = true,
-        lookahead = true,
-        keymaps = Hytra.defines,
-      },
-      move = {
-        enable = true,
-        set_jumps = true,
-      },
+      select = { enable = true, lookahead = true, keymaps = Hytra.defines },
+      move = { enable = true, set_jumps = true },
     },
-    -- Hytra 扩展配置
     hytra = {
       ts = { prefix = "<leader>m", trigger = "x" },
       groups = {
-        ["<leader>h"] = "x", -- Git Hunk Hydra 激活
-        ["<leader>d"] = "x", -- Diagnostic Hydra 激活
+        ["<leader>h"] = "x",
+        ["<leader>d"] = "x",
       }
     }
   },
   config = function(_, opts)
-    -- 1. 配置 Treesitter
-    local ts_ok, configs = pcall(require, "nvim-treesitter.configs")
-    if ts_ok then
-      configs.setup(opts)
-    end
+    require("nvim-treesitter.configs").setup(opts)
 
-    -- 2. 初始化 Hytra 逻辑
     local h_opts = opts.hytra or {}
-    
-    -- 自动生成 Treesitter 跳转 keymaps
     if h_opts.ts then
-      Hytra.setup_ts(h_opts.ts)
+      local prefix = h_opts.ts.prefix or "<leader>m"
+      local trigger = h_opts.ts.trigger or "x"
+      
+      -- 注册自动命令实现动态过滤
+      vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
+        callback = function(args)
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(args.buf) then
+              Hytra.register_buffer_ts(args.buf, prefix, trigger)
+            end
+          end)
+        end,
+      })
+      Hytra.register_buffer_ts(0, prefix, trigger)
     end
 
-    -- 批量激活其他组的 Hydra 模式
     if h_opts.groups then
       for prefix, trigger in pairs(h_opts.groups) do
         Hytra.activate(prefix, trigger)
       end
     end
-
-    -- 注册 HytraOn 命令，方便动态开启
-    vim.api.nvim_create_user_command("HytraOn", function(c)
-      local args = vim.split(c.args, "%s+")
-      local prefix = args[1]
-      local trigger = args[2] or "x"
-      if prefix then
-        Hytra.activate(prefix, trigger)
-      end
-    end, { nargs = "*" })
   end,
 }
