@@ -40,38 +40,52 @@ M.defines = {
 -- 2. 辅助工具函数
 -- =============================================================================
 
+---直接从 runtime 路径下的 textobjects.scm 文件中解析支持的 captures
+---@param lang string 语言名称 (例如 "lua")
+---@return table 捕获名集合
+function M.get_captures_from_scm(lang)
+    local captures = {}
+    -- 获取所有匹配的查询文件 (支持用户自定义和插件预设)
+    local files = vim.api.nvim_get_runtime_file("queries/" .. lang .. "/textobjects.scm", true)
+    
+    for _, file in ipairs(files) do
+        local f = io.open(file, "r")
+        if f then
+            local content = f:read("*all")
+            f:close()
+            -- 使用正则匹配 @name.something
+            for capture in content:gmatch("@([%w%._]+)") do
+                captures[capture] = true
+            end
+        end
+    end
+    return captures
+end
+
 ---获取当前 buffer 支持的 Treesitter textobject captures
 ---@param bufnr number
----@return table|nil 支持的 capture 集合 (key 为 capture 名，value 为 true)
+---@return table|nil 支持的 capture 集合
 function M.get_supported_captures(bufnr)
     local ok_parser, parsers = pcall(require, "nvim-treesitter.parsers")
-    if not ok_parser then return nil end
-
-    -- 兼容性检查：有些版本可能没有 get_buf_lang
     local lang
-    if parsers.get_buf_lang then
+    if ok_parser and parsers.get_buf_lang then
         lang = parsers.get_buf_lang(bufnr)
     else
         lang = vim.bo[bufnr].filetype
     end
     
-    if not lang then return nil end
+    if not lang or lang == "" then return nil end
 
-    local ok_query, query = pcall(require, "nvim-treesitter.query")
-    if not ok_query then return nil end
-
-    -- 再次确认 query 模块是否有 get_query 函数
-    if not query.get_query then return nil end
-
-    local ts_query = query.get_query(lang, "textobjects")
-    if not ts_query then return nil end
-
-    local captures = {}
-    if ts_query.captures then
-        for _, name in ipairs(ts_query.captures) do
-            captures[name] = true
-        end
+    -- 直接从 SCM 文件获取
+    local captures = M.get_captures_from_scm(lang)
+    
+    -- 处理一些常见的语言继承 (简单处理)
+    if lang == "typescript" or lang == "javascript" or lang == "tsx" then
+        local base = M.get_captures_from_scm("ecma")
+        for k, v in pairs(base) do captures[k] = v end
     end
+
+    if next(captures) == nil then return nil end
     return captures
 end
 

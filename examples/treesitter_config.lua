@@ -32,35 +32,35 @@ local Hytra = {
   }
 }
 
+-- 辅助：直接从 SCM 解析 captures
+function Hytra.get_captures_from_scm(lang)
+  local captures = {}
+  local files = vim.api.nvim_get_runtime_file("queries/" .. lang .. "/textobjects.scm", true)
+  for _, file in ipairs(files) do
+    local f = io.open(file, "r")
+    if f then
+      local content = f:read("*all")
+      f:close()
+      for capture in content:gmatch("@([%w%._]+)") do
+        captures[capture] = true
+      end
+    end
+  end
+  return captures
+end
+
 -- 辅助：获取支持的 capture
 function Hytra.get_supported_captures(bufnr)
   local ok_parser, parsers = pcall(require, "nvim-treesitter.parsers")
-  if not ok_parser then return nil end
-
   local lang
-  if parsers.get_buf_lang then
+  if ok_parser and parsers.get_buf_lang then
     lang = parsers.get_buf_lang(bufnr)
   else
     lang = vim.bo[bufnr].filetype
   end
 
-  if not lang then return nil end
-
-  local ok_query, query = pcall(require, "nvim-treesitter.query")
-  if not ok_query then return nil end
-
-  if not query.get_query then return nil end
-
-  local ts_query = query.get_query(lang, "textobjects")
-  if not ts_query then return nil end
-
-  local captures = {}
-  if ts_query.captures then
-    for _, name in ipairs(ts_query.captures) do
-      captures[name] = true
-    end
-  end
-  return captures
+  if not lang or lang == "" then return nil end
+  return Hytra.get_captures_from_scm(lang)
 end
 
 -- Treesitter 跳转核心逻辑
