@@ -1,43 +1,61 @@
-## what it is about
-this is neovim plug to enable hytra mode with ease with which-key
-with main features like to hytra mode
-1. register a group of keymaps 
-2. unregister a group of keymaps
-5. auto gen text-objects keymap with current file type
+# hytra-which.nvim
 
-## what it is for
-1. to make some group of keymaps more convenient to hydra mode
-  1. repeat action in plug:
-    1. lsp diagnostics
-    2. gitsigns hunk
-    3. coverage uncovered line
-    4. treesitter textobject such as: function, call, assignment etc.
-2. disable a group of keymaps also with is show in which panel
-3. assign a keymap group to a prefix with ease
+A lightweight Neovim plugin that leverages `which-key.nvim` v3's `loop` mode to provide a "Hydra-like" experience for repetitive navigation tasks.
 
-## what is the requires
-plugs to enhance it  
-1. "folke/which-key.nvim"  for hydra mode
-2. "nvim-treesitter/nvim-treesitter","nvim-treesitter/nvim-treesitter-textobjects" for textobject keymaps group auto gen.
+## 🚀 Features
 
-## how to install it
-	{
-		"chaoszendao/hytra-which ",
-		event = "VeryLazy",
-        opts = {
-        
+- **Universal Hydra Activator**: Turn any `which-key` prefix into a loop mode with a single trigger key (default: `x`).
+- **Treesitter Integration**: Built-in support for Treesitter textobjects with automatic keymap generation.
+- **Context Awareness**: Remembers the last jumped textobject for quick repeats.
+- **Zero Overhead**: Minimalist implementation using native `which-key` capabilities.
+
+## 📦 Installation
+
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+
+```lua
+{
+    "chaoszendao/hytra-which",
+    dependencies = {
+        "folke/which-key.nvim",
+        "nvim-treesitter/nvim-treesitter",
+        "nvim-treesitter/nvim-treesitter-textobjects",
+    },
+    opts = {
+        -- Built-in Treesitter Textobjects configuration
+        ts = {
+            prefix = "<leader>m",
+            trigger = "x"
+        },
+        -- Universal Activators for other groups
+        groups = {
+            ["<leader>h"] = "x", -- Git Hunks (gitsigns)
+            ["<leader>d"] = "x", -- LSP Diagnostics
         }
-	},
-## how to use it
-if you know how to use which-key and treesitter textobjects, you already know how to use it
+    },
+    config = function(_, opts)
+        require("hytra-which").setup(opts)
+    end
+}
+```
 
-## comparison with others
-1. nvim-hydra
-  1. settings for each group
-  2. complexed work with which-key
+## 🛠️ Usage
 
-## examples the way to use it
-1. command like :hydraToggle prefix|keymap lhs
-2. command like :hydraOn <leader>mt
-## some recommendations
+### Treesitter Mode
+- Press `<leader>mf` to jump to the next function.
+- The `which-key` panel will remain open (Hydra mode).
+- Press `j` or `k` to continue jumping to next/previous functions.
+- Press `x` (or your configured trigger) to re-enter Hydra mode using the last jump target.
 
+### Universal Mode
+- If you have a group like `<leader>h` for Git hunks:
+- Press `<leader>hx` to enter "Git Hydra".
+- Now `j` and `k` (or whatever keys are in that group) can be pressed repeatedly.
+
+## ⌨️ Commands
+
+- `:HytraOn <prefix> [trigger]` - Dynamically enable Hydra mode for any key prefix.
+
+## 📄 License
+
+MIT
