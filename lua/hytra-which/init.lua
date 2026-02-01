@@ -1,9 +1,10 @@
 local M = {}
 
--- 默认跳转目标
+-- =============================================================================
+-- 1. Treesitter Textobjects 状态与定义
+-- =============================================================================
 M.last_textobj = "function.outer"
 
--- 预定义的对象映射，方便扩展
 M.defines = {
     m = "function.outer",
     f = "call.outer",
@@ -35,11 +36,13 @@ M.defines = {
     U = "return.inner",
 }
 
----核心跳转函数
----@param obj string|nil 目标 textobject (例如 "function.outer")，若为 nil 则使用上次的目标
+-- =============================================================================
+-- 2. Treesitter 跳转核心函数
+-- =============================================================================
+---@param obj string|nil 目标 textobject，若为 nil 则使用上一次的对象
 ---@param forward boolean 是否向后跳转
 ---@param start boolean 是否跳转到开始位置
-function M.jump(obj, forward, start)
+function M.ts_jump(obj, forward, start)
     if obj then
         M.last_textobj = obj
     end
@@ -47,7 +50,6 @@ function M.jump(obj, forward, start)
 
     local ok, move = pcall(require, "nvim-treesitter-textobjects.move")
     if not ok then
-        -- 兼容不同的路径
         ok, move = pcall(require, "nvim-treesitter.textobjects.move")
     end
 
@@ -60,53 +62,100 @@ function M.jump(obj, forward, start)
     end
 end
 
----启动 Hytra 模式 (Which-key Loop)
----@param obj string|nil 如果提供，则先切换到该目标再跳转
-function M.start_hytra(obj)
+-- =============================================================================
+-- 3. 万能 Hydra 激活器 (针对已有 Keymap 组)
+-- =============================================================================
+---@param prefix string 需要进入循环模式的按键前缀 (例如 "<leader>h")
+---@param trigger string|nil 触发该模式的按键 (默认为 "x")
+---@param desc string|nil 描述
+function M.activate(prefix, trigger, desc)
     local wk_ok, wk = pcall(require, "which-key")
-    if not wk_ok then
-        vim.notify("which-key not found", vim.log.levels.ERROR)
-        return
-    end
+    if not wk_ok then return end
 
-    -- 1. 先执行一次移动 (如果 obj 为空则重复上一次)
-    M.jump(obj, true, true)
+    trigger = trigger or "x"
+    desc = desc or "Hydra Mode (" .. prefix .. ")"
 
-    -- 2. 开启 which-key 的循环模式
-    -- 假设用户绑定的前缀是 <leader>m
-    wk.show({ keys = "<leader>m", loop = true })
+    wk.add({
+        {
+            prefix .. trigger,
+            function()
+                wk.show({ keys = prefix, loop = true })
+            end,
+            desc = desc,
+        },
+    })
 end
 
----注册按键到 Which-key
-function M.setup(opts)
+-- =============================================================================
+-- 4. Treesitter 特殊配置生成
+-- =============================================================================
+---生成一组 TS 跳转映射，并在跳转后自动进入 Hydra 模式
+function M.setup_ts(opts)
     opts = opts or {}
     local prefix = opts.prefix or "<leader>m"
+    local trigger = opts.trigger or "x"
     local wk_ok, wk = pcall(require, "which-key")
     if not wk_ok then return end
 
     local items = {
-        { prefix, group = "Hytra (TS Move)", mode = "n" },
-        -- 核心入口：重复上一次跳转并进入 Hydra 模式
-        { prefix .. "x", function() M.start_hytra() end, desc = "Hydra Mode (Repeat Last)" },
-        -- 基础跳转控制
-        { prefix .. "j", function() M.jump(nil, true, true) end, desc = "Next Start" },
-        { prefix .. "k", function() M.jump(nil, false, true) end, desc = "Prev Start" },
-        { prefix .. "J", function() M.jump(nil, true, false) end, desc = "Next End" },
-        { prefix .. "K", function() M.jump(nil, false, false) end, desc = "Prev End" },
+        { prefix, group = "TS-Hytra", mode = "n" },
+        -- 核心控制：j/k/J/K
+        { prefix .. "j", function() M.ts_jump(nil, true, true) end, desc = "Next Start" },
+        { prefix .. "k", function() M.ts_jump(nil, false, true) end, desc = "Prev Start" },
+        { prefix .. "J", function() M.ts_jump(nil, true, false) end, desc = "Next End" },
+        { prefix .. "K", function() M.ts_jump(nil, false, false) end, desc = "Prev End" },
     }
 
-    -- 批量注册对象跳转，跳转后自动触发循环
+    -- 批量生成各个对象的跳转
     for k, v in pairs(M.defines) do
         table.insert(items, {
             prefix .. k,
             function()
-                M.start_hytra(v)
+                M.ts_jump(v, true, true)
+                -- 跳转后自动开启循环面板
+                wk.show({ keys = prefix, loop = true })
             end,
             desc = v,
         })
     end
 
     wk.add(items)
+
+    -- 注册 x 键作为手动激活入口
+    M.activate(prefix, trigger, "TS TextObject Hydra")
+end
+
+-- =============================================================================
+-- 5. 统一入口与命令
+-- =============================================================================
+function M.setup(opts)
+    opts = opts or {}
+
+    -- 处理 Treesitter 自动生成
+    if opts.ts then
+        M.setup_ts(opts.ts)
+    end
+
+    -- 处理其他通用组的批量激活
+    if opts.groups then
+        for k, v in pairs(opts.groups) do
+            if type(k) == "number" then
+                M.activate(v, "x")
+            else
+                M.activate(k, v)
+            end
+        end
+    end
+
+    -- 注册命令方便动态使用
+    vim.api.nvim_create_user_command("HytraOn", function(cmd_opts)
+        local args = vim.split(cmd_opts.args, "%s+")
+        local prefix = args[1]
+        local trigger = args[2] or "x"
+        if prefix then
+            M.activate(prefix, trigger)
+        end
+    end, { nargs = "*" })
 end
 
 return M
