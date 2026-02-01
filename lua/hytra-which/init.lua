@@ -47,18 +47,30 @@ function M.get_supported_captures(bufnr)
     local ok_parser, parsers = pcall(require, "nvim-treesitter.parsers")
     if not ok_parser then return nil end
 
-    local lang = parsers.get_buf_lang(bufnr)
+    -- 兼容性检查：有些版本可能没有 get_buf_lang
+    local lang
+    if parsers.get_buf_lang then
+        lang = parsers.get_buf_lang(bufnr)
+    else
+        lang = vim.bo[bufnr].filetype
+    end
+    
     if not lang then return nil end
 
     local ok_query, query = pcall(require, "nvim-treesitter.query")
     if not ok_query then return nil end
 
+    -- 再次确认 query 模块是否有 get_query 函数
+    if not query.get_query then return nil end
+
     local ts_query = query.get_query(lang, "textobjects")
     if not ts_query then return nil end
 
     local captures = {}
-    for _, name in ipairs(ts_query.captures) do
-        captures[name] = true
+    if ts_query.captures then
+        for _, name in ipairs(ts_query.captures) do
+            captures[name] = true
+        end
     end
     return captures
 end
