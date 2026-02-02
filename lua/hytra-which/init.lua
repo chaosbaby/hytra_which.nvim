@@ -260,7 +260,6 @@ function M.register_buffer_ts(bufnr, prefix, trigger)
                 prefix .. k,
                 function()
                     M.ts_jump(v, true, true)
-                    wk.show({ keys = prefix, loop = true })
                 end,
                 desc = v,
                 buffer = bufnr,

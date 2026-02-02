@@ -7,3 +7,4 @@
 | 003 | Fix get_buf_lang nil error | Done | [./tracks/003-bugfix/index.md](./tracks/003-bugfix/index.md) |
 | 004 | Direct SCM Parsing | Done | [./tracks/004-scm/index.md](./tracks/004-scm/index.md) |
 | 005 | Dynamic Textobject Analysis | Done | [./tracks/005-dynamic-textobjects/index.md](./tracks/005-dynamic-textobjects/index.md) |
+| 006 | Refine Hydra Activation | In Progress | [./tracks/006-refine-activation/index.md](./tracks/006-refine-activation/index.md) |
