@@ -5,6 +5,12 @@ local M = {}
 -- =============================================================================
 M.last_textobj = "function.outer"
 
+M.state = {
+    mode = "refined", -- "refined" (only existing in buffer) or "full" (all supported by lang)
+    prefix = nil,
+    trigger = nil,
+}
+
 M.defines = {
     m = "function.outer",
     f = "call.outer",
@@ -89,6 +95,47 @@ function M.get_supported_captures(bufnr)
     return captures
 end
 
+---获取当前 buffer 中实际存在的 Treesitter textobject captures
+---@param bufnr number
+---@return table|nil 实际存在的 capture 集合
+function M.get_actual_captures(bufnr)
+    bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+    
+    -- 获取语言，优先使用 nvim-treesitter 的 parser 映射
+    local lang
+    local ok_parser, parsers = pcall(require, "nvim-treesitter.parsers")
+    if ok_parser and parsers.get_buf_lang then
+        lang = parsers.get_buf_lang(bufnr)
+    else
+        lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype) or vim.bo[bufnr].filetype
+    end
+    
+    if not lang or lang == "" then return nil end
+
+    -- 使用标准 Neovim API 获取 query
+    local ok_q, q = pcall(vim.treesitter.query.get, lang, "textobjects")
+    if not ok_q or not q then return nil end
+
+    -- 使用标准 Neovim API 获取 parser 和 root
+    local ok_p, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
+    if not ok_p or not parser then return nil end
+    
+    local ok_tree, tree = pcall(parser.parse, parser)
+    if not ok_tree or not tree or not tree[1] then return nil end
+    local root = tree[1]:root()
+
+    local actual = {}
+    -- 迭代捕获
+    pcall(function()
+        for id, _ in q:iter_captures(root, bufnr, 0, -1) do
+            local name = q.captures[id]
+            actual[name] = true
+        end
+    end)
+    
+    return actual
+end
+
 -- =============================================================================
 -- 3. Treesitter 跳转核心函数
 -- =============================================================================
@@ -150,23 +197,64 @@ function M.register_buffer_ts(bufnr, prefix, trigger)
     local wk_ok, wk = pcall(require, "which-key")
     if not wk_ok then return end
 
-    -- 获取当前 buffer 支持的 captures
+    bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+
+    -- 更新全局状态以便重刷
+    M.state.prefix = prefix
+    M.state.trigger = trigger
+
+    -- 获取该语言支持的所有 captures
     local supported = M.get_supported_captures(bufnr)
     if not supported then return end
 
+    -- 如果是精简模式，进一步过滤当前 buffer 实际存在的
+    local filter_map = supported
+    if M.state.mode == "refined" then
+        local actual = M.get_actual_captures(bufnr)
+        if actual then
+            filter_map = {}
+            for k, _ in pairs(supported) do
+                if actual[k] then
+                    filter_map[k] = true
+                end
+            end
+        end
+    end
+
+    -- 先清理该 prefix 下的旧映射 (针对该 buffer)
+    -- 注意：which-key 会自动覆盖重复的映射，但为了显示干净，我们构造一个完整的列表
     local items = {
-        { prefix, group = "TS-Hytra", mode = "n", buffer = bufnr },
+        { prefix, group = "TS-Hytra (" .. M.state.mode .. ")", mode = "n", buffer = bufnr },
         -- 基础控制始终注册
         { prefix .. "j", function() M.ts_jump(nil, true, true) end, desc = "Next Start", buffer = bufnr },
         { prefix .. "k", function() M.ts_jump(nil, false, true) end, desc = "Prev Start", buffer = bufnr },
         { prefix .. "J", function() M.ts_jump(nil, true, false) end, desc = "Next End", buffer = bufnr },
         { prefix .. "K", function() M.ts_jump(nil, false, false) end, desc = "Prev End", buffer = bufnr },
+        -- 切换模式映射
+        {
+            prefix .. "z",
+            function()
+                M.toggle_mode(bufnr)
+            end,
+            desc = "Toggle Refined/Full Mode",
+            buffer = bufnr,
+        },
     }
 
     -- 动态过滤并注册
     local has_any = false
+    -- 我们需要把不满足条件的按键显式设置为 nil 或不包含，以确保 toggle 回去时消失
+    -- 为了彻底清除，我们先用 which-key 的新 API 特性或简单的全覆盖
+    
+    -- 收集所有可能的定义键
+    local all_keys = {}
+    for k, _ in pairs(M.defines) do
+        table.insert(all_keys, prefix .. k)
+    end
+    
+    -- 构造新列表
     for k, v in pairs(M.defines) do
-        if supported[v] then
+        if filter_map[v] then
             has_any = true
             table.insert(items, {
                 prefix .. k,
@@ -177,6 +265,9 @@ function M.register_buffer_ts(bufnr, prefix, trigger)
                 desc = v,
                 buffer = bufnr,
             })
+        else
+            -- 如果该对象不在 filter_map 中，显式将其在该 prefix 下禁用，防止 toggle 切换时不消失
+            table.insert(items, { prefix .. k, hidden = true, buffer = bufnr })
         end
     end
 
@@ -187,11 +278,29 @@ function M.register_buffer_ts(bufnr, prefix, trigger)
     end
 end
 
+---切换精简/全量模式并重新注册
+function M.toggle_mode(bufnr)
+    bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
+    M.state.mode = M.state.mode == "refined" and "full" or "refined"
+    vim.notify("Hytra Mode: " .. M.state.mode)
+    if M.state.prefix then
+        M.register_buffer_ts(bufnr, M.state.prefix, M.state.trigger)
+        -- 重新显示 which-key 菜单
+        local wk_ok, wk = pcall(require, "which-key")
+        if wk_ok then
+            wk.show({ keys = M.state.prefix, loop = true })
+        end
+    end
+end
+
 ---生成 TS 跳转映射，采用动态过滤机制
 function M.setup_ts(opts)
     opts = opts or {}
     local prefix = opts.prefix or "<leader>m"
     local trigger = opts.trigger or "x"
+
+    M.state.prefix = prefix
+    M.state.trigger = trigger
 
     -- 创建自动命令组
     local group = vim.api.nvim_create_augroup("HytraTS", { clear = true })
