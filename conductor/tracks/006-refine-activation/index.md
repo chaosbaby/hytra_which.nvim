@@ -1,8 +1,8 @@
 # Track: Refine Hydra Activation
 
 ## Status
-- [ ] Step 1: Update Mapping Registration
-- [ ] Step 2: Verification
+- [x] Step 1: Update Mapping Registration
+- [x] Step 2: Verification
 
 ## Documentation
 - [Specification](./spec.md)

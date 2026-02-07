@@ -1,11 +1,14 @@
-# hytra-which.nvim
+# hytra_which.nvim
 
-A lightweight Neovim plugin that leverages `which-key.nvim` v3's `loop` mode to provide a "Hydra-like" experience for repetitive navigation tasks.
+A lightweight Neovim plugin that leverages `which-key.nvim` v3's `loop` mode to provide a "Hydra-like" experience for repetitive navigation tasks, with smart Treesitter textobject detection.
 
 ## 🚀 Features
 
 - **Universal Hydra Activator**: Turn any `which-key` prefix into a loop mode with a single trigger key (default: `x`).
-- **Treesitter Integration**: Built-in support for Treesitter textobjects with automatic keymap generation.
+- **Smart Treesitter Integration**: 
+    - **SCM Auto-Detection**: Automatically identifies supported textobjects by parsing language-specific `.scm` files.
+    - **Refined Mode (Dynamic Analysis)**: Optionally filters the menu to only show textobjects that actually exist in the current buffer.
+    - **Toggle Mode**: Switch between "Refined" and "Full" modes on the fly (press `z` in the menu).
 - **Context Awareness**: Remembers the last jumped textobject for quick repeats.
 - **Zero Overhead**: Minimalist implementation using native `which-key` capabilities.
 
@@ -15,7 +18,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-    "chaoszendao/hytra-which",
+    "chaosbaby/hytra_which.nvim",
     dependencies = {
         "folke/which-key.nvim",
         "nvim-treesitter/nvim-treesitter",
@@ -42,15 +45,19 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ## 🛠️ Usage
 
 ### Treesitter Mode
-- Press `<leader>mf` to jump to the next function.
-- The `which-key` panel will remain open (Hydra mode).
-- Press `j` or `k` to continue jumping to next/previous functions.
-- Press `x` (or your configured trigger) to re-enter Hydra mode using the last jump target.
+- Press `<leader>m` to open the textobject menu.
+- **Smart Filtering**: Only textobjects supported by the current filetype (and optionally those existing in the buffer) are shown.
+- **Jump**: Press a key (e.g., `f` for function) to jump. The menu stays open (Hydra mode).
+- **Repeat**: 
+    - Press `j` / `k` to jump to the **next/previous start** of the last object.
+    - Press `J` / `K` to jump to the **next/previous end** of the last object.
+- **Toggle**: Press `z` to toggle between **Refined** (only present in buffer) and **Full** (all supported by language) modes.
+- **Re-activate**: Press `<leader>mx` to quickly re-enter the loop using the last jump target.
 
 ### Universal Mode
 - If you have a group like `<leader>h` for Git hunks:
 - Press `<leader>hx` to enter "Git Hydra".
-- Now `j` and `k` (or whatever keys are in that group) can be pressed repeatedly.
+- Now all keys within the `<leader>h` group (like `j`, `k` for next/prev hunk) can be pressed repeatedly without re-triggering the prefix.
 
 ## ⌨️ Commands
 
