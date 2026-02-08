@@ -1,4 +1,4 @@
-# Tech Stack - Hytra-Which
+# Tech Stack - Hydra-Which
 
 ## Core
 - **Language**: Lua

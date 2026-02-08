@@ -1,4 +1,4 @@
-# hytra_which.nvim
+# hydra-which.nvim
 
 A lightweight Neovim plugin that leverages `which-key.nvim` v3's `loop` mode to provide a "Hydra-like" experience for repetitive navigation tasks, with smart Treesitter textobject detection.
 
@@ -18,7 +18,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-    "chaosbaby/hytra_which.nvim",
+    "chaosbaby/hydra-which.nvim",
     dependencies = {
         "folke/which-key.nvim",
         "nvim-treesitter/nvim-treesitter",
@@ -37,7 +37,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
         }
     },
     config = function(_, opts)
-        require("hytra-which").setup(opts)
+        require("hydra-which").setup(opts)
     end
 }
 ```
@@ -61,7 +61,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ## ⌨️ Commands
 
-- `:HytraOn <prefix> [trigger]` - Dynamically enable Hydra mode for any key prefix.
+- `:HydraOn <prefix> [trigger]` - Dynamically enable Hydra mode for any key prefix.
 
 ## 📄 License
 

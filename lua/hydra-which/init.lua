@@ -224,7 +224,7 @@ function M.register_buffer_ts(bufnr, prefix, trigger)
     -- 先清理该 prefix 下的旧映射 (针对该 buffer)
     -- 注意：which-key 会自动覆盖重复的映射，但为了显示干净，我们构造一个完整的列表
     local items = {
-        { prefix, group = "TS-Hytra (" .. M.state.mode .. ")", mode = "n", buffer = bufnr },
+        { prefix, group = "TS-Hydra (" .. M.state.mode .. ")", mode = "n", buffer = bufnr },
         -- 基础控制始终注册
         { prefix .. "j", function() M.ts_jump(nil, true, true) end, desc = "Next Start", buffer = bufnr },
         { prefix .. "k", function() M.ts_jump(nil, false, true) end, desc = "Prev Start", buffer = bufnr },
@@ -281,7 +281,7 @@ end
 function M.toggle_mode(bufnr)
     bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
     M.state.mode = M.state.mode == "refined" and "full" or "refined"
-    vim.notify("Hytra Mode: " .. M.state.mode)
+    vim.notify("Hydra Mode: " .. M.state.mode)
     if M.state.prefix then
         M.register_buffer_ts(bufnr, M.state.prefix, M.state.trigger)
         -- 重新显示 which-key 菜单
@@ -302,7 +302,7 @@ function M.setup_ts(opts)
     M.state.trigger = trigger
 
     -- 创建自动命令组
-    local group = vim.api.nvim_create_augroup("HytraTS", { clear = true })
+    local group = vim.api.nvim_create_augroup("HydraTS", { clear = true })
 
     -- 注册自动命令，在文件类型改变或进入 buffer 时重新注册映射
     vim.api.nvim_create_autocmd({ "FileType", "BufWinEnter" }, {
@@ -344,7 +344,7 @@ function M.setup(opts)
     end
 
     -- 注册命令方便动态使用
-    vim.api.nvim_create_user_command("HytraOn", function(cmd_opts)
+    vim.api.nvim_create_user_command("HydraOn", function(cmd_opts)
         local args = vim.split(cmd_opts.args, "%s+")
         local prefix = args[1]
         local trigger = args[2] or "x"

@@ -1,4 +1,4 @@
-local Hytra = {
+local Hydra = {
   last_textobj = "function.outer",
   defines = {
     m = "function.outer",
@@ -33,7 +33,7 @@ local Hytra = {
 }
 
 -- 辅助：直接从 SCM 解析 captures
-function Hytra.get_captures_from_scm(lang)
+function Hydra.get_captures_from_scm(lang)
   local captures = {}
   local files = vim.api.nvim_get_runtime_file("queries/" .. lang .. "/textobjects.scm", true)
   for _, file in ipairs(files) do
@@ -50,7 +50,7 @@ function Hytra.get_captures_from_scm(lang)
 end
 
 -- 辅助：获取支持的 capture
-function Hytra.get_supported_captures(bufnr)
+function Hydra.get_supported_captures(bufnr)
   local ok_parser, parsers = pcall(require, "nvim-treesitter.parsers")
   local lang
   if ok_parser and parsers.get_buf_lang then
@@ -60,13 +60,13 @@ function Hytra.get_supported_captures(bufnr)
   end
 
   if not lang or lang == "" then return nil end
-  return Hytra.get_captures_from_scm(lang)
+  return Hydra.get_captures_from_scm(lang)
 end
 
 -- Treesitter 跳转核心逻辑
-function Hytra.ts_jump(obj, forward, start)
-  if obj then Hytra.last_textobj = obj end
-  local target = "@" .. Hytra.last_textobj
+function Hydra.ts_jump(obj, forward, start)
+  if obj then Hydra.last_textobj = obj end
+  local target = "@" .. Hydra.last_textobj
   local ok, move = pcall(require, "nvim-treesitter-textobjects.move")
   if not ok then ok, move = pcall(require, "nvim-treesitter.textobjects.move") end
   if ok and move then
@@ -79,7 +79,7 @@ function Hytra.ts_jump(obj, forward, start)
 end
 
 -- 万能 Hydra 激活器
-function Hytra.activate(prefix, trigger, desc, bufnr)
+function Hydra.activate(prefix, trigger, desc, bufnr)
   local wk_ok, wk = pcall(require, "which-key")
   if not wk_ok then return end
   trigger = trigger or "x"
@@ -94,29 +94,29 @@ function Hytra.activate(prefix, trigger, desc, bufnr)
 end
 
 -- 动态为 Buffer 注册 TS 映射
-function Hytra.register_buffer_ts(bufnr, prefix, trigger)
+function Hydra.register_buffer_ts(bufnr, prefix, trigger)
   local wk_ok, wk = pcall(require, "which-key")
   if not wk_ok then return end
 
-  local supported = Hytra.get_supported_captures(bufnr)
+  local supported = Hydra.get_supported_captures(bufnr)
   if not supported then return end
 
   local items = {
-    { prefix, group = "TS-Hytra", mode = "n", buffer = bufnr },
-    { prefix .. "j", function() Hytra.ts_jump(nil, true, true) end, desc = "Next Start", buffer = bufnr },
-    { prefix .. "k", function() Hytra.ts_jump(nil, false, true) end, desc = "Prev Start", buffer = bufnr },
-    { prefix .. "J", function() Hytra.ts_jump(nil, true, false) end, desc = "Next End", buffer = bufnr },
-    { prefix .. "K", function() Hytra.ts_jump(nil, false, false) end, desc = "Prev End", buffer = bufnr },
+    { prefix, group = "TS-Hydra", mode = "n", buffer = bufnr },
+    { prefix .. "j", function() Hydra.ts_jump(nil, true, true) end, desc = "Next Start", buffer = bufnr },
+    { prefix .. "k", function() Hydra.ts_jump(nil, false, true) end, desc = "Prev Start", buffer = bufnr },
+    { prefix .. "J", function() Hydra.ts_jump(nil, true, false) end, desc = "Next End", buffer = bufnr },
+    { prefix .. "K", function() Hydra.ts_jump(nil, false, false) end, desc = "Prev End", buffer = bufnr },
   }
 
   local has_any = false
-  for k, v in pairs(Hytra.defines) do
+  for k, v in pairs(Hydra.defines) do
     if supported[v] then
       has_any = true
       table.insert(items, {
         prefix .. k,
         function()
-          Hytra.ts_jump(v, true, true)
+          Hydra.ts_jump(v, true, true)
           wk.show({ keys = prefix, loop = true })
         end,
         desc = v,
@@ -127,7 +127,7 @@ function Hytra.register_buffer_ts(bufnr, prefix, trigger)
 
   if has_any then
     wk.add(items)
-    Hytra.activate(prefix, trigger, "TS TextObject Hydra", bufnr)
+    Hydra.activate(prefix, trigger, "TS TextObject Hydra", bufnr)
   end
 end
 
@@ -140,10 +140,10 @@ return {
   opts = {
     ensure_installed = { "lua", "python", "markdown" },
     textobjects = {
-      select = { enable = true, lookahead = true, keymaps = Hytra.defines },
+      select = { enable = true, lookahead = true, keymaps = Hydra.defines },
       move = { enable = true, set_jumps = true },
     },
-    hytra = {
+    hydra = {
       ts = { prefix = "<leader>m", trigger = "x" },
       groups = {
         ["<leader>h"] = "x",
@@ -154,7 +154,7 @@ return {
   config = function(_, opts)
     require("nvim-treesitter.configs").setup(opts)
 
-    local h_opts = opts.hytra or {}
+    local h_opts = opts.hydra or {}
     if h_opts.ts then
       local prefix = h_opts.ts.prefix or "<leader>m"
       local trigger = h_opts.ts.trigger or "x"
@@ -164,17 +164,17 @@ return {
         callback = function(args)
           vim.schedule(function()
             if vim.api.nvim_buf_is_valid(args.buf) then
-              Hytra.register_buffer_ts(args.buf, prefix, trigger)
+              Hydra.register_buffer_ts(args.buf, prefix, trigger)
             end
           end)
         end,
       })
-      Hytra.register_buffer_ts(0, prefix, trigger)
+      Hydra.register_buffer_ts(0, prefix, trigger)
     end
 
     if h_opts.groups then
       for prefix, trigger in pairs(h_opts.groups) do
-        Hytra.activate(prefix, trigger)
+        Hydra.activate(prefix, trigger)
       end
     end
   end,

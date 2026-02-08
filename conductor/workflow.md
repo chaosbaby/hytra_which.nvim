@@ -1,4 +1,4 @@
-# Workflow - Hytra-Which
+# Workflow - Hydra-Which
 
 ## Branching Model: Git Flow
 - `master`: Production-ready code.

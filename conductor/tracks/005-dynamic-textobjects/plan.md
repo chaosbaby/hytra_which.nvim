@@ -1,7 +1,7 @@
 # Implementation Plan: Dynamic Textobject Analysis and Toggle
 
 ## Step 1: Add State Management
-- Add `M.state` to `lua/hytra-which/init.lua` to track the mode (`refined` vs `full`).
+- Add `M.state` to `lua/hydra-which/init.lua` to track the mode (`refined` vs `full`).
 - Store `prefix` and `trigger` in `M.state` for easy re-registration.
 
 ## Step 2: Implement Buffer Capture Detection

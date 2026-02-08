@@ -1,4 +1,4 @@
-# Hytra-Which Project Index
+# Hydra-Which Project Index
 
 - [Product Definition](./product.md)
 - [Tech Stack](./tech-stack.md)

@@ -1,7 +1,7 @@
 # Specification: Dynamic Textobject Analysis and Toggle
 
 ## Background
-Currently, `hytra-which.nvim` filters textobjects based on whether the language supports them (by parsing SCM files). However, it shows all supported objects even if they don't exist in the current buffer.
+Currently, `hydra-which.nvim` filters textobjects based on whether the language supports them (by parsing SCM files). However, it shows all supported objects even if they don't exist in the current buffer.
 
 ## Requirements
 1.  **Buffer-Specific Analysis**: Detect which textobjects actually have matches in the current buffer using Tree-sitter queries.

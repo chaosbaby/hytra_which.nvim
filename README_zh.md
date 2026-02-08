@@ -1,4 +1,4 @@
-# hytra_which.nvim
+# hydra-which.nvim
 
 一个轻量级的 Neovim 插件，利用 `which-key.nvim` v3 的 `loop` (循环) 模式，为重复性的导航任务提供类似 "Hydra" 的体验，并具备智能 Treesitter 文本对象 (textobject) 检测功能。
 
@@ -18,7 +18,7 @@
 
 ```lua
 {
-    "chaosbaby/hytra_which.nvim",
+    "chaosbaby/hydra-which.nvim",
     dependencies = {
         "folke/which-key.nvim",
         "nvim-treesitter/nvim-treesitter",
@@ -37,7 +37,7 @@
         }
     },
     config = function(_, opts)
-        require("hytra-which").setup(opts)
+        require("hydra-which").setup(opts)
     end
 }
 ```
@@ -61,4 +61,4 @@
 
 ## ⌨️ 命令
 
-- `:HytraOn <prefix> [trigger]` - 动态为任何按键前缀启用 Hydra 模式。
+- `:HydraOn <prefix> [trigger]` - 动态为任何按键前缀启用 Hydra 模式。

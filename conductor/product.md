@@ -1,4 +1,4 @@
-# Product Definition - Hytra-Which
+# Product Definition - Hydra-Which
 
 ## Vision
 A lightweight Neovim plugin that leverages `which-key.nvim` v3's `loop` mode to provide a "Hydra-like" experience for repetitive navigation tasks, especially Treesitter textobjects, Git hunks, and LSP diagnostics.

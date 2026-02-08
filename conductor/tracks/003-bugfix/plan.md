@@ -1,6 +1,6 @@
 # Implementation Plan - Fix get_buf_lang nil error
 
-- [x] Update `lua/hytra-which/init.lua`: (Done)
+- [x] Update `lua/hydra-which/init.lua`: (Done)
     - Check if `parsers.get_buf_lang` exists before calling.
     - Fallback to `vim.bo[bufnr].filetype`.
     - Ensure `query.get_query` is also handled safely.
