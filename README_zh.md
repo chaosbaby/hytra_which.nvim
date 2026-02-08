@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README_zh.md)
 
-一个轻量级的 Neovim 插件，利用 `which-key.nvim` v3 的 `loop` (循环) 模式，为重复性的导航任务提供类似 "Hydra" 的体验，并具备智能 Treesitter 文本对象 (textobject) 检测功能。
+将 Hydra 体验引入 which-key.nvim：支持智能 Treesitter 移动以及针对任何插件的通用循环模式。
 
 ## 🚀 特性
 
