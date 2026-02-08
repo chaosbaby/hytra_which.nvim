@@ -1,5 +1,7 @@
 # hydra-which.nvim
 
+[English](./README.md) | [中文](./README_zh.md)
+
 A lightweight Neovim plugin that leverages `which-key.nvim` v3's `loop` mode to provide a "Hydra-like" experience for repetitive navigation tasks, with smart Treesitter textobject detection.
 
 ## 🚀 Features
